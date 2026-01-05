@@ -14,23 +14,23 @@ services:
         gitlab_rails['time_zone'] = '${TIMEZONE}'
         
         # --- Container Registry (DevSecOps Vital) ---
-        # فعال‌سازی رجیستری برای نگهداری ایمیج‌های امن
+        # enabling registery for safe docker images
         registry_external_url 'https://${GITLAB_HOSTNAME}:5050'
         
         # --- NGINX Hardening ---
-        # ریدایرکت خودکار به HTTPS
+        # auto redirect to HTTPS
         nginx['redirect_http_to_https'] = true
         nginx['ssl_certificate'] = "/etc/gitlab/ssl/${GITLAB_HOSTNAME}.crt"
         nginx['ssl_certificate_key'] = "/etc/gitlab/ssl/${GITLAB_HOSTNAME}.key"
-        # فعال‌سازی HTTP/2 برای سرعت و امنیت بیشتر
+        # enabling HTTP/2 for more spped and security
         nginx['http2_enabled'] = true
         
         # --- Monitoring & Observability ---
-        # برای ارسال متریک‌ها به پرومتئوس (اگر تیم شما مانیتورینگ دارد)
+        # to send metrics to prometheus
         prometheus['enable'] = true
         
         # --- Resource Limits ---
-        # محدود کردن Workerها برای جلوگیری از مصرف کل رم سیستم
+        # limitting workers
         puma['worker_processes'] = 2
         sidekiq['max_concurrency'] = 10
         
@@ -43,16 +43,16 @@ services:
       - './config:/etc/gitlab'
       - './logs:/var/log/gitlab'
       - './data:/var/opt/gitlab'
-      # Mount SSL certs (شما باید این‌ها را بسازید)
+      # Mount SSL certs (you should build them first)
       - './ssl:/etc/gitlab/ssl'
     networks:
       - gitlab_net
-      - jiranet # اتصال به شبکه جیرا برای Integration
-    shm_size: '256m' # الزامی برای متریک‌های Prometheus
+      - jiranet # jira integration
+    shm_size: '256m' # prometheus integration
     deploy:
       resources:
         limits:
-          memory: 6G # گیت‌لب بسیار سنگین است
+          memory: 6G # too heavy :)
           cpus: '2.0'
     healthcheck:
       test: ["CMD-SHELL", "curl -k -f https://localhost/-/health || exit 1"]
@@ -63,5 +63,5 @@ services:
 networks:
   gitlab_net:
     driver: bridge
-  jiranet: # شبکه مشترک با جیرا
+  jiranet: # shared network with jiraا
     external: true
