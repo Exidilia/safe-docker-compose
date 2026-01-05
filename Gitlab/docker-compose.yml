@@ -63,5 +63,5 @@ services:
 networks:
   gitlab_net:
     driver: bridge
-  jiranet: # shared network with jiraا
+  jiranet: # shared network with jira
     external: true
