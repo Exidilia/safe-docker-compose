@@ -1,80 +1,74 @@
 version: '3.8'
 
 services:
-  jira:
-    image: atlassian/jira-software:9.12.0 # Always pin a specific version, never use 'latest' in prod
-    container_name: jira_server
-    restart: unless-stopped
-    depends_on:
-      postgresql:
-        condition: service_healthy # Wait until DB is actually ready to accept connections
-    networks:
-      - jira-backend
-      - jira-frontend
-    volumes:
-      - jiradata:/var/atlassian/application-data/jira
-      - /etc/localtime:/etc/localtime:ro # Sync time with host
-    ports:
-      - "127.0.0.1:8080:8080" # Bind to localhost only, use a Reverse Proxy (Nginx) for SSL/Termination
-    env_file:
-      - .env # Load secrets from a separate file
+  jira_db:
+    image: postgres:14-alpine
+    container_name: jira_postgres_prod
+    restart: always
     environment:
-      - ATL_JDBC_URL=jdbc:postgresql://postgresql:5432/jiradb
-      - ATL_JDBC_USER=${POSTGRES_USER}
-      - ATL_JDBC_PASSWORD=${POSTGRES_PASSWORD}
-      - ATL_DB_DRIVER=org.postgresql.Driver
-      - ATL_DB_TYPE=postgres72
-      - JVM_MINIMUM_MEMORY=2048m
-      - JVM_MAXIMUM_MEMORY=4096m
-      # Reverse Proxy Settings (Crucial for GitLab Integration via HTTPS)
-      - ATL_PROXY_NAME=${JIRA_DOMAIN}
-      - ATL_PROXY_PORT=443
-      - ATL_PROXY_SCHEME=https
+      POSTGRES_USER: ${POSTGRES_USER_PROD} # reading environment variables 
+      POSTGRES_PASSWORD: ${POSTGRES_PASS_PROD}
+      POSTGRES_DB: jiradb
+    volumes:
+      - postgresqldata_prod:/var/lib/postgresql/data
+    networks:
+      - jiranet
     deploy:
       resources:
         limits:
-          cpus: '2.00'
-          memory: 5G
+          memory: 2G # limiting database
+    # container-level hardening
     security_opt:
       - no-new-privileges:true
 
-  postgresql:
-    image: postgres:14-alpine # Jira 9.x requires Postgres 14+
-    container_name: jira_db
-    restart: unless-stopped
-    networks:
-      - jira-backend
-    volumes:
-      - postgresqldata:/var/lib/postgresql/data
-    env_file:
-      - .env
+  jira:
+    image: atlassian/jira-software:9.12.0
+    container_name: jira_software_prod
+    restart: always
+    depends_on:
+      - jira_db
+    ports:
+      # only localhost can see it
+      # nginx sends traffic to this port
+      - "127.0.0.1:8080:8080"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=jiradb
-      - POSTGRES_ENCODING=UNICODE
-      - POSTGRES_COLLATE=C
-    shm_size: 1g # Postgres needs shared memory for performance
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d jiradb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - ATL_JDBC_URL=jdbc:postgresql://jira_db:5432/jiradb
+      - ATL_JDBC_USER=${POSTGRES_USER_PROD}
+      - ATL_JDBC_PASSWORD=${POSTGRES_PASS_PROD}
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgres
+      
+      # safe proxy settings (HTTPS Offloading)
+      # this dhould be your real domain name
+      - ATL_PROXY_NAME=jira.yourcompany.com
+      - ATL_PROXY_PORT=443
+      - ATL_PROXY_SCHEME=https
+      # increase cookies safety
+      - ATL_TOMCAT_CONTEXTPATH=
+      
+      # ram resources
+      - JVM_MINIMUM_MEMORY=2048m
+      - JVM_MAXIMUM_MEMORY=4096m
+    volumes:
+      - jiradata_prod:/var/atlassian/application-data/jira
+      # time sync for security logs
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - jiranet
     deploy:
       resources:
         limits:
-          cpus: '1.00'
-          memory: 2G
+          cpus: '2.0'
+          memory: 6G
     security_opt:
       - no-new-privileges:true
 
 volumes:
-  jiradata:
-  postgresqldata:
+  jiradata_prod:
+  postgresqldata_prod:
 
 networks:
-  jira-frontend: # Network for Nginx/User access
-    driver: bridge
-  jira-backend:  # Isolated network for DB communication (Not exposed to host)
-    driver: bridge
-    internal: true # Cut off internet access for DBw
+  jiranet:
+    # considering this network has been built previously
+    external: true
+    name: jiranet
