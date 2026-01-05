@@ -1,0 +1,63 @@
+# --------------------------------------------------------------------
+# 1. Security & Secrets (CRITICAL)
+# --------------------------------------------------------------------
+.env
+.env.*
+! .env.example
+*.pem
+*.key
+*.cert
+*.crt
+id_rsa
+id_rsa.pub
+secrets/
+
+# --------------------------------------------------------------------
+# 2. Docker & Container Data
+# --------------------------------------------------------------------
+# If you ever switch to bind mounts (./data), prevent committing DB data
+postgres-data/
+jira-data/
+data/
+db/
+backup/
+backups/
+
+# Local overrides for docker-compose (DevOps Best Practice)
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Docker build logs
+docker-log/
+*.log
+
+# --------------------------------------------------------------------
+# 3. Operating System Files (For Windows & WSL users)
+# --------------------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Linux / WSL
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+~*
+
+# --------------------------------------------------------------------
+# 4. IDE & Editors (Visual Studio Code, IntelliJ, etc.)
+# --------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
