@@ -1,4 +1,5 @@
 #### Tree of the files: 
+```
 .
 ├── certs
 │   ├── fullchain.pem
@@ -13,7 +14,7 @@
 ├── docker-compose.yml
 └── logs
     └── vault_audit.log
-
+```
 #################################################################
 # HashiCorp Vault Production Deployment Guide (Docker Compose)
 
